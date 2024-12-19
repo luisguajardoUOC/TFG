@@ -1,0 +1,56 @@
+services:
+  backend:
+    build:
+      context: ./flask_project
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+      - "8080:8080"      
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_PORT: 3306
+      DB_NAME: flask_db
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./web-filter
+      dockerfile: Dockerfile
+    ports:
+      - "4200:80"
+    networks:
+      - app-network
+    
+  db:
+    image: mysql:8.0
+    container_name: flask_mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: flask_db
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+networks:
+  app-network:
+
+volumes:
+  db_data:
